@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cart-rs-bench"
+version = "0.0.0"
+description = "Python baseline benchmarks for CaRT to compare with Rust implementation"
+readme = "benchmarks/README.md"
+requires-python = ">=3.8,<3.12"
+dependencies = [
+  "cart>=1.2.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["benchmarks"]
+
+[project.scripts]
+bench-py = "benchmarks.python_baseline:main"
+
+[tool.uv]
+default-groups = []

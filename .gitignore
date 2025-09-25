@@ -1,0 +1,11 @@
+# uv / venv
+.venv/
+
+# Benchmark outputs
+benchmarks/results/
+benchmarks/data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
