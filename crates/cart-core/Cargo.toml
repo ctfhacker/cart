@@ -1,0 +1,9 @@
+[package]
+name = "cart-core"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Core CaRT encode/decode primitives (stub)"
+publish = false
+
+[dependencies]

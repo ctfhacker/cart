@@ -1,0 +1,10 @@
+[package]
+name = "cart-benches"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Criterion-based benchmarks for cart-core (stub)"
+publish = false
+
+[dependencies]
+cart-core = { path = "../cart-core" }
