@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | CART-M0-01 | docs/architecture.md, docs/roadmap.md (M0) | Toolchain drift, missing MSRV decision |
 | CART-M0-02 | CART-M0-01, benchmarks/results/python-baseline.json | Unconfirmed budgets, stakeholder alignment |
-| CART-M0-03 | CART-M0-01, cart-py fixtures | Python environment availability |
+| CART-M0-03 | CART-M0-01, .venv/lib64/python3.11/site-packages/cart fixtures | Python environment availability |
 | CART-M1-01 | CART-M0-01, CART-M0-03, docs/roadmap.md (M1) | ARC4 correctness, fixture coverage |
 | CART-M1-02 | CART-M1-01 | Digest parity, buffer reuse correctness |
 | CART-M1-03 | CART-M0-02, CART-M1-01 | Metadata corner cases, measurement tooling drift |
@@ -63,11 +63,11 @@
 
 ### CART-M0-03 – Build cross-language parity smoke harness
 - **Milestone:** M0 – Workspace Bootstrapped & Measurement Guardrails
-- **Goal:** Provide a reusable harness that invokes `cart-py` fixtures and future Rust APIs to assert byte parity for encode/decode and metadata scenarios.
+- **Goal:** Provide a reusable harness that invokes `.venv/lib64/python3.11/site-packages/cart` fixtures and future Rust APIs to assert byte parity for encode/decode and metadata scenarios.
 - **Rationale:** Required for roadmap M0 exit criteria and ensures local-first smoke checks before deeper parity coverage.
 - **Scope:** Add `tests/parity_smoke.rs` (ignored until implementations land) calling shared helper library; create `scripts/run_parity_smoke.sh` to seed fixtures via Python; ensure harness streams data in 64 KiB chunks and stores expected outputs under `tests/fixtures/`.
 - **Out of Scope:** Implementing Rust encode/decode logic or exhaustive parity coverage; CI wiring beyond documenting invocation.
-- **Dependencies:** CART-M0-01, cart-py vendor directory, Python runtime availability.
+- **Dependencies:** CART-M0-01, .venv/lib64/python3.11/site-packages/cart vendor directory, Python runtime availability.
 - **Acceptance Hints:** Harness validates fixture availability at runtime; `cargo test --test parity_smoke -- --ignored` completes under 30 s with Python reference; file operations reuse buffers without cloning payloads; documented instructions specify environment variables for Python module path; script exits non-zero if parity mismatches once Rust code lands.
 - **Performance Budget:** Harness memory watermark <64 MiB even on large fixtures; Python round trips executed once per test to limit runtime; streaming helper avoids buffering more than 2 blocks concurrently.
 - **Simplicity Budget:** Use standard library pipes and `tempfile`; avoid additional crates beyond dependency plan; helpers return borrowed slices where possible.

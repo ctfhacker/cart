@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/cart-core",
+    "crates/cart-cli",
     "crates/cart-benches",
 ]
 resolver = "2"

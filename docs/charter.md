@@ -5,7 +5,7 @@
 - Provide faster, predictable tooling for pipelines that need deterministic packing, metadata inspection, and rapid round-tripping of binaries.
 
 ## Context & Evidence
-- Python reference (`cart-py/cart/cart.py`) defines current CaRT v1 semantics; charter aligns with existing doc `docs/charter.md`.
+- Python reference (`.venv/lib64/python3.11/site-packages/cart/cart/cart.py`) defines current CaRT v1 semantics; charter aligns with existing doc `docs/charter.md`.
 - Cross-language parity is required so Rust artifacts interoperate with Python-generated CaRT files and vice versa.
 
 ## Scope

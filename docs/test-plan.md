@@ -27,7 +27,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | AT-M0-01 | M0 | Workspace compiles & tooling aligned | N/A | `cargo check --workspace` | No failures, no unexpected warnings | Completes ≤90 s on reference host.
 | AT-M0-02 | M0 | Stub smoke tests wired | N/A | `cargo test --workspace --lib -- --nocapture` | All stub tests pass; logs show `CartError::Unimplemented` for unimplemented paths | Completes ≤120 s.
-| AT-M0-03 | M0 | Python parity harness callable | `cart-py/` | `python3 -m unittest cart-py/unittests/test_cart.py` | Test suite passes | Runtime ≤180 s; failures block milestone.
+| AT-M0-03 | M0 | Python parity harness callable | `.venv/lib64/python3.11/site-packages/cart/` | `python3 -m unittest .venv/lib64/python3.11/site-packages/cart/unittests/test_cart.py` | Test suite passes | Runtime ≤180 s; failures block milestone.
 | AT-M1-01 | M1 | Pack/unpack parity vs Python | `random_1MB.bin`, `generated/random_1MB.cart` | `cargo test -p cart-core parity::round_trip_random_1mb -- --exact` | `assert_eq!` on bytes and metadata | Zero mismatched bytes; diff >0 bytes blocks merge.
 | AT-M1-02 | M1 | Metadata peek matches Python | `generated/random_10MB.cart` | `cargo test -p cart-core parity::metadata_view -- --exact` | Header/footer JSON identical | Byte-for-byte JSON equality; allocate ≤128 KiB heap.
 | AT-M1-03 | M1 | `is_cart` detection fast path | `generated/*.cart`, synthetic noise | `cargo test -p cart-core detection::is_cart_matrix` | True for CaRT, false for noise | 0 false positives/negatives across matrix.

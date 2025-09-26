@@ -10,7 +10,7 @@
 - Working tree is detached (`HEAD (no branch)`) with numerous staged additions including the Python reference, promptfall assets, and `.direnv` outputs, signalling an in-progress restructure (source: Command: git status -sb).
 
 ## Repository Components
-- `cart-py/` vendor directory houses the authoritative Python CaRT implementation, CLI behaviors, unit tests, and Azure DevOps pipelines for packaging, testing, and deployment, providing reference semantics and process expectations (source: cart-py/README.md; cart-py/cart/cart.py; cart-py/unittests/test_cart.py; cart-py/pipelines/azure-build.yaml).
+- `.venv/lib64/python3.11/site-packages/cart/` vendor directory houses the authoritative Python CaRT implementation, CLI behaviors, unit tests, and Azure DevOps pipelines for packaging, testing, and deployment, providing reference semantics and process expectations (source: .venv/lib64/python3.11/site-packages/cart/README.md; .venv/lib64/python3.11/site-packages/cart/cart/cart.py; .venv/lib64/python3.11/site-packages/cart/unittests/test_cart.py; .venv/lib64/python3.11/site-packages/cart/pipelines/azure-build.yaml).
 - `benchmarks/` offers Python baseline tooling, synthetic datasets, and a captured JSON run to quantify current performance for pack/unpack/metadata workflows (source: benchmarks/README.md; benchmarks/python_baseline.py; Command: ls benchmarks/data; benchmarks/results/python-baseline.json).
 - `promptfall/` replaces the earlier `prompts/` directory with role-specific prompt templates, documentation, and a runner script that orchestrates the Charter→Context→Roadmap flow; the runner expects prompt paths like `promptfall/prompts/context.md` (source: Command: ls promptfall/prompts; promptfall/prompts/context.md; promptfall/prompts/performance-mantra.md; promptfall/README.md; promptfall/scripts/runner.sh).
 - `ci/lint.sh` codifies local-first CI expectations (format, clippy, build) but presumes a Cargo workspace that does not yet exist, highlighting divergence between scripts and code (source: ci/lint.sh).
@@ -49,10 +49,10 @@
 - main.py
 - README.md
 - Command: git status -sb
-- cart-py/README.md
-- cart-py/cart/cart.py
-- cart-py/unittests/test_cart.py
-- cart-py/pipelines/azure-build.yaml
+- .venv/lib64/python3.11/site-packages/cart/README.md
+- .venv/lib64/python3.11/site-packages/cart/cart/cart.py
+- .venv/lib64/python3.11/site-packages/cart/unittests/test_cart.py
+- .venv/lib64/python3.11/site-packages/cart/pipelines/azure-build.yaml
 - benchmarks/README.md
 - benchmarks/python_baseline.py
 - Command: ls benchmarks/data

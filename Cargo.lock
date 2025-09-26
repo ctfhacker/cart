@@ -10,5 +10,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cart-cli"
+version = "0.0.0"
+dependencies = [
+ "cart-core",
+]
+
+[[package]]
 name = "cart-core"
 version = "0.0.0"

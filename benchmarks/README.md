@@ -2,12 +2,12 @@
 
 This benchmark script measures the Python reference implementation to establish a performance baseline we will replicate in Rust.
 
-- Scenarios mirror unit tests in `cart-py/unittests/test_cart.py` (empty, small, large, metadata, is_cart).
+- Scenarios mirror unit tests in `.venv/lib64/python3.11/site-packages/cart/unittests/test_cart.py` (empty, small, large, metadata, is_cart).
 - Outputs JSON with per-iteration timings and throughput (MiB/s) for pack/unpack scenarios.
 
 ## Run
 
-Ensure the `cart` package is importable. The script auto-adds `cart-py` to `PYTHONPATH` if run from the repo root.
+Ensure the `cart` package is importable. The script auto-adds `.venv/lib64/python3.11/site-packages/cart` to `PYTHONPATH` if run from the repo root.
 
 Examples:
 

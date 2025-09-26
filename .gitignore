@@ -1,6 +1,8 @@
 # uv / venv
 .venv/
 .direnv
+promptfall
+cart-py
 
 # Benchmark outputs
 benchmarks/results/
@@ -13,4 +15,3 @@ target/
 __pycache__/
 *.pyc
 *.pyo
-cart-py

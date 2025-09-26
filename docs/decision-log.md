@@ -3,7 +3,7 @@
 - Decision: Deliver both a Rust library and a CLI.
   - Rationale: Matches current and future usage patterns; parity with Python’s dual usage.
   - Stakeholders: Library consumers, pipeline/CLI users.
-  - Evidence: Python reference exposes library API and CLI entrypoint (`cart-py/cart/cart.py`).
+  - Evidence: Python reference exposes library API and CLI entrypoint (`.venv/lib64/python3.11/site-packages/cart/cart/cart.py`).
 
 - Decision: Target 10x speedup over Python reference on representative workloads.
   - Rationale: Primary success criterion stated by stakeholders.
@@ -13,12 +13,12 @@
 - Decision: Strict compatibility with CaRT v1 artifacts produced/consumed by Python.
   - Rationale: Interop is non‑negotiable; avoids ecosystem fragmentation.
   - Stakeholders: Current CaRT users and maintainers.
-  - Evidence: Reference behaviors in `cart-py/unittests/test_cart.py`.
+  - Evidence: Reference behaviors in `.venv/lib64/python3.11/site-packages/cart/unittests/test_cart.py`.
 
 - Decision: License under MIT, aligning with Python repo’s license.
   - Rationale: Consistency and permissive reuse.
   - Stakeholders: Legal/compliance, maintainers, adopters.
-  - Evidence: `cart-py/LICENSE.md`.
+  - Evidence: `.venv/lib64/python3.11/site-packages/cart/LICENSE.md`.
 
 - Decision: Target platform is Linux only.
   - Rationale: Stated constraint; simplifies support and CI.

@@ -18,6 +18,6 @@ mod tests {
     #[test]
     fn bench_harness_is_stubbed() {
         let err = run_pending().unwrap_err();
-        assert_eq!(err, CartError::Unimplemented("bench harness"));
+        assert!(matches!(err, CartError::Unimplemented("bench harness")));
     }
 }

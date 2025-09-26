@@ -7,7 +7,7 @@
 ### M0 – Workspace Bootstrapped & Measurement Guardrails
 - **Outcome:** Rust workspace scaffolding, CI alignment, and a shared performance measurement doctrine so teams can iterate on parity with evidence.
 - **Entrance Criteria:** Charter, context snapshot, decision log, and performance mantra ratified; access to Python reference implementation and benchmark datasets validated.
-- **Exit Criteria:** Library and CLI crates compiling via `cargo check`; CI scripts updated to reference the workspace; cross-language smoke harness invoking `cart-py` fixtures lands in `tests/`; documented performance budgets and measurement plan (latency, throughput, memory) published in `docs/` (see `docs/performance-plan.md`) with linkage to `benchmarks/python_baseline.py`.
+- **Exit Criteria:** Library and CLI crates compiling via `cargo check`; CI scripts updated to reference the workspace; cross-language smoke harness invoking `.venv/lib64/python3.11/site-packages/cart` fixtures lands in `tests/`; documented performance budgets and measurement plan (latency, throughput, memory) published in `docs/` (see `docs/performance-plan.md`) with linkage to `benchmarks/python_baseline.py`.
 - **Dependencies:** Stakeholder agreement on provisional Minimum Supported Rust Version (MSRV) and development toolchain; confirmation that Python fixtures remain the authoritative source of truth.
 - **Risks:** MSRV indecision or fixture ownership gaps could block workspace initialization; benchmarking environments may drift without pinned tool versions.
 - **Checkpoints:** (1) Design review of crate layout/API ownership; (2) Measurement plan walkthrough confirming budgets, tooling, and reporting cadence.

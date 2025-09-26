@@ -50,28 +50,28 @@ mod tests {
     fn run_is_stubbed() {
         let args = vec![OsString::from("cart-cli"), OsString::from("encode")];
         let err = run(args).unwrap_err();
-        assert_eq!(err, CartError::Unimplemented("cli encode"));
+        assert!(matches!(err, CartError::Unimplemented("cli encode")));
     }
 
     #[test]
     fn decode_is_stubbed() {
         let args = vec![OsString::from("cart-cli"), OsString::from("decode")];
         let err = run(args).unwrap_err();
-        assert_eq!(err, CartError::Unimplemented("cli decode"));
+        assert!(matches!(err, CartError::Unimplemented("cli decode")));
     }
 
     #[test]
     fn inspect_is_stubbed() {
         let args = vec![OsString::from("cart-cli"), OsString::from("inspect")];
         let err = run(args).unwrap_err();
-        assert_eq!(err, CartError::Unimplemented("cli inspect"));
+        assert!(matches!(err, CartError::Unimplemented("cli inspect")));
     }
 
     #[test]
     fn verify_is_stubbed() {
         let args = vec![OsString::from("cart-cli"), OsString::from("verify")];
         let err = run(args).unwrap_err();
-        assert_eq!(err, CartError::Unimplemented("cli verify"));
+        assert!(matches!(err, CartError::Unimplemented("cli verify")));
     }
 
     #[test]
