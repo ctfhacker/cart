@@ -25,7 +25,7 @@
 
 ## Task List
 
-- **Completion Check:** Run `./ci/lint.sh` and ensure it passes before marking any task complete.
+- **Completion Check:** When a task changes code or tests, run `./ci/lint.sh` and ensure it passes before marking the task complete.
 - **Docs Upkeep:** Run `promptfall/prompts/docsync.md` and follow its checklist before closing a task so documentation stays current.
 
 ### CART-M0-01 – Scaffold Rust workspace and align CI
