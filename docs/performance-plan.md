@@ -9,6 +9,7 @@ This plan defines how we measure throughput, latency, and memory for the Rust im
 
 ## Baseline Evidence
 - Python reference results live at `benchmarks/results/python-baseline.json`. Regenerate with `python3 benchmarks/python_baseline.py --iters 3 --profile unittests --out benchmarks/results/python-baseline.json` after running `scripts/uv_setup.sh` when dependencies drift.
+- For implementation parity, compare against the installed reference module under `.venv/lib64/python3.11/site-packages/cart/` (or the equivalent path for your Python version) in addition to `cart-py/` sources.
 - Benchmark scenarios mirror `cart-py/unittests/test_cart.py`, covering empty, metadata-only, 128 MiB zeroed data, and incompressible payloads.
 
 ## Budgets
