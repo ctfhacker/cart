@@ -27,6 +27,7 @@
 
 - **Completion Check:** When a task changes code or tests, run `./ci/lint.sh` and ensure it passes before marking the task complete.
 - **Docs Upkeep:** Run `promptfall/prompts/docsync.md` and follow its checklist before closing a task so documentation stays current.
+- **No Future Proofing:** Deliver only what the task currently requires. Stubs exist solely for immediately planned work; remove speculative placeholders instead of guessing at future design needs.
 
 ### CART-M0-01 – Scaffold Rust workspace and align CI
 - **Milestone:** M0 – Workspace Bootstrapped & Measurement Guardrails

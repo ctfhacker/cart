@@ -33,6 +33,9 @@
 - `cart-cli` wires parse/emit, uses `cart-core` engines, and adds validation/round-trip modes required by charter.
 - Benchmark harness consumes `cart-core` to run per-scenario metrics against JSON baselines in `benchmarks/`.
 
+## Simplicity Guardrail
+- Never future-proof: implement only the behaviors required by the current milestone. Stubs are allowed solely for features we are actively landing next; remove or avoid placeholders for speculative work. When direction changes, revisit the design instead of layering abstractions in advance.
+
 ## Component Responsibilities & Trust Boundaries
 - `cart-core::format`: Parse and emit mandatory header/footer structs, validate magic/version, expose serde-compatible optional metadata JSON handling. Trust boundary: raw byte streams.
 - `cart-core::crypto`: Wrap ARC4 implementation (e.g. `rc4` crate) with key derivation/validation; no plaintext keys leave the crate. Trust boundary: key material.

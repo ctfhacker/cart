@@ -65,4 +65,4 @@ Attach additional detail (e.g., Criterion’s `benchmark.json`) under `benchmark
 ## Next Steps
 - Wire Criterion benchmarks in `cart-benches` once encode/decode land.
 - Automate ledger updates in CI after nightly runs, guarded to avoid flaky noise.
-- Extend the plan with Service Level Objective (SLO) thresholds for future steady-state monitoring once real-world data arrives.
+- Add Service Level Objective (SLO) thresholds only after real-world workloads are agreed upon; avoid speculative targets.
