@@ -1,11 +1,16 @@
 # uv / venv
 .venv/
+.direnv
 
 # Benchmark outputs
 benchmarks/results/
 benchmarks/data/
 
+# Cargo target dir
+target/
+
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
+cart-py
