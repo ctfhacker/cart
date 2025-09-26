@@ -7,3 +7,4 @@ description = "Core CaRT encode/decode primitives (stub)"
 publish = false
 
 [dependencies]
+flate2 = "1.1.2"

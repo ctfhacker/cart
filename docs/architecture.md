@@ -39,7 +39,7 @@
 ## Component Responsibilities & Trust Boundaries
 - `cart-core::format`: Parse and emit mandatory header/footer structs, validate magic/version, expose serde-compatible optional metadata JSON handling. Trust boundary: raw byte streams.
 - `cart-core::crypto`: Wrap ARC4 implementation (e.g. `rc4` crate) with key derivation/validation; no plaintext keys leave the crate. Trust boundary: key material.
-- `cart-core::codec`: Streamed pack/unpack pipelines using `Read`/`Write`, buffer reuse pools sized to CaRT block (64 KiB), optional footer digests (MD5/SHA1/SHA256/length). Trust boundary: plaintext payloads.
+- `cart-core::codec`: Pack/unpack pipelines using `Read`/`Write`; current decode path reads the encrypted payload into memory before inflating with zlib, with buffer reuse planned in the next iteration. Trust boundary: plaintext payloads.
 - `cart-core::metadata`: Fast path to inspect optional header/footer without full decode; uses `Peeker` abstraction over `Read + Seek` or buffered slices.
 - `cart-core::detect`: Lightweight function to confirm CaRT magic without allocating; accepts `Read` or `[u8; N]` slice via generics.
 - `cart-cli`: Clap command graph (`encode`, `decode`, `inspect`, `verify`), file system interactions, progress reporting, structured logs/metrics emission. Trust boundary: user inputs, filesystem paths.
@@ -48,7 +48,7 @@
 ## Interfaces & Data Contracts
 - Library entry points (sync first, async later if justified):
   - `fn encode<R: Read, W: Write>(input: R, output: W, opts: EncodeOptions) -> Result<EncodeReport>`
-  - `fn decode<R: Read, W: Write>(input: R, output: W, opts: DecodeOptions) -> Result<DecodeReport>`
+  - `fn decode<R: Read, W: Write>(input: &mut R, output: &mut W) -> Result<DecodeReport>` (reads the encrypted payload into memory today; streaming decode with reuse pools is tracked for M1).
   - `fn metadata<R: Read + Seek>(input: &mut R) -> Result<MetadataView>`
   - `fn is_cart<R: Read>(input: &mut R) -> Result<bool>`
   - `fn round_trip<R: Read + Seek>(input: &mut R, writer: W, opts: RoundTripOptions) -> Result<RoundTripReport>` (CLI-only helper).

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+use flate2::read::ZlibDecoder;
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
 use std::fmt::{self, Display};
@@ -30,6 +31,7 @@ pub enum CartError {
     Truncated(&'static str),
     InvalidMetadata(&'static str),
     LengthOverflow(&'static str),
+    DecodeFailure(&'static str),
     /// Raised for operations that are still being built out.
     Unimplemented(&'static str),
 }
@@ -100,6 +102,7 @@ impl Display for CartError {
             Self::LengthOverflow(section) => {
                 write!(f, "{section} length does not fit into usize")
             }
+            Self::DecodeFailure(section) => write!(f, "decode failure: {section}"),
             Self::Unimplemented(component) => {
                 write!(f, "{component} is not implemented yet")
             }
@@ -186,9 +189,13 @@ impl MandatoryHeader {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct EncodeReport;
 
-/// Stub decode result; populated fields arrive with the real implementation.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct DecodeReport;
+/// Information about a completed decode operation.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct DecodeReport {
+    pub optional_header_json: Option<String>,
+    pub optional_footer_json: Option<String>,
+    pub decoded_bytes: u64,
+}
 
 /// Metadata view derived from the mandatory header.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,17 +233,85 @@ where
     Err(CartError::Unimplemented("encode"))
 }
 
-/// Decode a `CaRT` archive once implemented.
+/// Decode a `CaRT` archive from `input` and write the payload to `output`.
 ///
 /// # Errors
 ///
-/// Always returns [`CartError::Unimplemented`] until the decoder is wired.
-pub fn decode<R, W>(_input: &mut R, _output: &mut W) -> Result<DecodeReport>
+/// Returns [`CartError::DecodeFailure`] when the compressed stream cannot be
+/// decompressed, [`CartError::Truncated`] when footer metadata is incomplete,
+/// or [`CartError::InvalidMetadata`] when decrypted metadata is malformed.
+/// The current implementation reads the encrypted payload into memory before
+/// inflating it with zlib; future streaming work will reduce this footprint.
+pub fn decode<R, W>(input: &mut R, output: &mut W) -> Result<DecodeReport>
 where
     R: Read,
     W: Write,
 {
-    Err(CartError::Unimplemented("decode"))
+    let header = MandatoryHeader::read(&mut *input)?;
+    let optional_header_json = read_optional_section(
+        input,
+        header.optional_header_len,
+        &header.arc4_key,
+        "decode optional header",
+    )?;
+
+    let mut payload = Vec::new();
+    input.read_to_end(&mut payload)?;
+    if payload.len() < FOOTER_LEN {
+        return Err(CartError::Truncated("decode footer"));
+    }
+
+    let footer_offset = payload.len() - FOOTER_LEN;
+    let footer = MandatoryFooter::read(&mut &payload[footer_offset..])?;
+    let optional_footer_len = usize::try_from(footer.optional_footer_len)
+        .map_err(|_| CartError::LengthOverflow("decode optional footer"))?;
+
+    if footer_offset < optional_footer_len {
+        return Err(CartError::Truncated("decode optional footer"));
+    }
+
+    let compressed_end = footer_offset - optional_footer_len;
+    if compressed_end > payload.len() {
+        return Err(CartError::Truncated("decode compressed payload"));
+    }
+
+    let encrypted_stream = &payload[..compressed_end];
+    let optional_footer_encrypted = &payload[compressed_end..footer_offset];
+
+    let optional_footer_json = if optional_footer_len > 0 {
+        let mut reader = optional_footer_encrypted;
+        read_optional_section(
+            &mut reader,
+            footer.optional_footer_len,
+            &header.arc4_key,
+            "decode optional footer",
+        )?
+    } else {
+        None
+    };
+
+    let mut decrypted = encrypted_stream.to_vec();
+    let mut cipher = Arc4::new(&header.arc4_key);
+    cipher.apply_keystream(&mut decrypted);
+
+    let decompressed = zlib_decompress_all(&decrypted)?;
+    output.write_all(&decompressed)?;
+    let decoded_bytes = decompressed.len() as u64;
+
+    Ok(DecodeReport {
+        optional_header_json,
+        optional_footer_json,
+        decoded_bytes,
+    })
+}
+
+fn zlib_decompress_all(data: &[u8]) -> Result<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(data);
+    let mut output = Vec::new();
+    decoder
+        .read_to_end(&mut output)
+        .map_err(|_| CartError::DecodeFailure("zlib stream"))?;
+    Ok(output)
 }
 
 /// Peek metadata without full decode.
@@ -462,11 +537,14 @@ mod tests {
     }
 
     #[test]
-    fn decode_is_stubbed() {
+    fn decode_rejects_empty_stream() {
         let mut input = Cursor::new(Vec::<u8>::new());
         let mut output = Cursor::new(Vec::<u8>::new());
         let err = decode(&mut input, &mut output).unwrap_err();
-        assert!(matches!(err, CartError::Unimplemented("decode")));
+        assert!(matches!(
+            err,
+            CartError::Truncated("MandatoryHeader::read buffer")
+        ));
     }
 
     #[test]

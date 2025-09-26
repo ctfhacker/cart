@@ -81,10 +81,10 @@
 - **Milestone:** M1 – Minimal Encode/Decode Parity
 - **Goal:** Deliver the Rust decode pipeline with streaming buffer reuse, header/footer parsing, and Python parity for representative fixtures.
 - **Rationale:** Core capability for charter parity requirement and roadmap M1 exit criteria.
-- **Scope:** Implement header/footer parsing, ARC4 decrypt streaming, digest validation, `CartError` types, and `decode<R: Read, W: Write>` API with buffer reuse.
+- **Scope:** Implement header/footer parsing, ARC4 decrypt, digest validation, `CartError` types, and a `decode<R: Read, W: Write>` API. The first implementation may read the encrypted payload into memory; follow-up work adds buffer reuse for full streaming parity.
 - **Out of Scope:** Encode pipeline, CLI wiring, benchmarking harness updates beyond decode coverage.
 - **Dependencies:** CART-M0-01, CART-M0-03, docs/architecture.md component design.
-- **Acceptance Hints:** Cross-language parity tests pass for small (≤1 MiB) and large (≥128 MiB) fixtures; decode throughput ≥5.5 GiB/s (≤0.042 s per 128 MiB zeros) recorded in ledger; peak heap allocation outside streaming buffer remains <128 KiB verified via allocator instrumentation; API surfaces borrow-based views for metadata; error paths documented and unit tested.
+- **Acceptance Hints:** Cross-language parity tests pass for small (≤1 MiB) and large (≥128 MiB) fixtures (current smoke test uses seeded artifacts); decode throughput ≥5.5 GiB/s (≤0.042 s per 128 MiB zeros) recorded in ledger; peak heap allocation outside streaming buffer remains <128 KiB once streaming reuse lands; API surfaces borrow-based views for metadata; error paths documented and unit tested.
 - **Performance Budget:** Loop hoists invariants, reuses single 64 KiB buffer, avoids per-chunk allocations, and ensures branch predictability by checking hot-path flags first.
 - **Simplicity Budget:** Maintain one decode state struct, no dynamic dispatch, functions under 120 lines, follow straightforward control flow with documented invariants.
 - **Testing Expectations:** Add property tests for header/footer parser, integration tests via parity harness for decode-only flow, and failure-case tests (bad magic, digest mismatch).

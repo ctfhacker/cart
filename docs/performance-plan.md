@@ -15,7 +15,7 @@ This plan defines how we measure throughput, latency, and memory for the Rust im
 | Scenario | Metric | Budget | Notes |
 | --- | --- | --- | --- |
 | Encode 128 MiB zeros | Throughput | ≥1.5 GiB/s | Measure wall time after warm-up, release build with `--bench` profile. |
-| Decode 128 MiB zeros | Throughput | ≥5.5 GiB/s | Single-threaded decode, reuse 64 KiB buffer. |
+| Decode 128 MiB zeros | Throughput | ≥5.5 GiB/s | Single-threaded decode; current implementation buffers payload in memory with reuse plan tracked for M1. |
 | Metadata peek | Latency | ≤0.02 ms | Use warmed file handles and reuse buffers. |
 | `is_cart` detection | Latency | ≤5 µs | Use fixed-size slice inputs. |
 | Any scenario | Peak heap beyond streaming buffer | <128 KiB | Track via `valgrind --tool=dhat` or `jeprof` on stable input. |
