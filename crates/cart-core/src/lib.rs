@@ -250,14 +250,19 @@ impl Default for MetadataView {
 ///
 /// Write a `CaRT` archive with default metadata and digests.
 ///
-/// The initial implementation keeps the payload in memory before compression and
-/// encryption. Future milestones introduce streaming buffer reuse and optional
-/// metadata handling to align with the Python reference.
 pub fn encode<R, W>(input: &mut R, output: &mut W) -> Result<EncodeReport>
 where
     R: Read,
     W: Write,
 {
+    let header = MandatoryHeader {
+        version: VERSION_V1,
+        reserved: RESERVED_DEFAULT,
+        arc4_key: DEFAULT_ARC4_KEY,
+        optional_header_len: 0,
+    };
+    output.write_all(&header.as_bytes())?;
+
     let mut plaintext = Vec::new();
     input.read_to_end(&mut plaintext)?;
 
@@ -268,25 +273,14 @@ where
     let mut cipher = Arc4::new(&DEFAULT_ARC4_KEY);
     cipher.apply_keystream(&mut compressed);
 
-    let header = MandatoryHeader {
-        version: VERSION_V1,
-        reserved: RESERVED_DEFAULT,
-        arc4_key: DEFAULT_ARC4_KEY,
-        optional_header_len: 0,
-    };
-    let header_bytes = header.as_bytes();
-    output.write_all(&header_bytes)?;
-
     output.write_all(&compressed)?;
 
-    let optional_footer_pos = (HEADER_LEN + compressed.len()) as u64;
     let footer = MandatoryFooter {
         reserved: RESERVED_DEFAULT,
-        optional_footer_pos,
+        optional_footer_pos: (HEADER_LEN + compressed.len()) as u64,
         optional_footer_len: 0,
     };
-    let footer_bytes = footer.as_bytes();
-    output.write_all(&footer_bytes)?;
+    output.write_all(&footer.as_bytes())?;
 
     Ok(EncodeReport {
         input_bytes: plaintext.len() as u64,
@@ -306,11 +300,11 @@ where
 /// - [`CartError::LengthOverflow`] when optional section lengths do not fit in
 ///   memory on the current platform.
 ///
-/// The current implementation reads the encrypted payload into memory before
-/// inflating it with zlib; future streaming work will reduce this footprint.
+/// Streams the encrypted payload through RC4 and zlib without buffering the
+/// entire archive in memory.
 pub fn decode<R, W>(input: &mut R, output: &mut W) -> Result<DecodeReport>
 where
-    R: Read,
+    R: Read + Seek,
     W: Write,
 {
     let header = MandatoryHeader::read(&mut *input)?;
@@ -321,33 +315,28 @@ where
         "decode optional header",
     )?;
 
-    let mut payload = Vec::new();
-    input.read_to_end(&mut payload)?;
-    if payload.len() < FOOTER_LEN {
-        return Err(CartError::Truncated("decode footer"));
+    let payload_start = input.stream_position()?;
+
+    let footer_seek = i64::try_from(FOOTER_LEN).map_err(|_| CartError::LengthOverflow("footer"))?;
+    input
+        .seek(SeekFrom::End(-footer_seek))
+        .map_err(|_| CartError::Truncated("decode footer"))?;
+    let footer = MandatoryFooter::read(&mut *input)?;
+
+    if footer.optional_footer_pos < payload_start {
+        return Err(CartError::Truncated("decode optional footer bounds"));
     }
 
-    let footer_offset = payload.len() - FOOTER_LEN;
-    let footer = MandatoryFooter::read(&mut &payload[footer_offset..])?;
-    let optional_footer_len = usize::try_from(footer.optional_footer_len)
-        .map_err(|_| CartError::LengthOverflow("decode optional footer"))?;
+    let payload_len = footer
+        .optional_footer_pos
+        .checked_sub(payload_start)
+        .ok_or(CartError::Truncated("decode payload bounds"))?;
 
-    if footer_offset < optional_footer_len {
-        return Err(CartError::Truncated("decode optional footer"));
-    }
-
-    let compressed_end = footer_offset - optional_footer_len;
-    if compressed_end > payload.len() {
-        return Err(CartError::Truncated("decode compressed payload"));
-    }
-
-    let encrypted_stream = &payload[..compressed_end];
-    let optional_footer_encrypted = &payload[compressed_end..footer_offset];
-
-    let optional_footer_json = if optional_footer_len > 0 {
-        let mut reader = optional_footer_encrypted;
+    let optional_footer_json = if footer.optional_footer_len > 0 {
+        input.seek(SeekFrom::Start(footer.optional_footer_pos))?;
+        let mut footer_reader = (&mut *input).take(footer.optional_footer_len);
         read_optional_section(
-            &mut reader,
+            &mut footer_reader,
             footer.optional_footer_len,
             &header.arc4_key,
             "decode optional footer",
@@ -356,13 +345,11 @@ where
         None
     };
 
-    let mut decrypted = encrypted_stream.to_vec();
-    let mut cipher = Arc4::new(&header.arc4_key);
-    cipher.apply_keystream(&mut decrypted);
-
-    let decompressed = zlib_decompress_all(&decrypted)?;
-    output.write_all(&decompressed)?;
-    let decoded_bytes = decompressed.len() as u64;
+    input.seek(SeekFrom::Start(payload_start))?;
+    let mut encrypted_payload = (&mut *input).take(payload_len);
+    let arc4_reader = Arc4Reader::new(&mut encrypted_payload, &header.arc4_key);
+    let mut decoder = ZlibDecoder::new(arc4_reader);
+    let decoded_bytes = io::copy(&mut decoder, output)?;
 
     Ok(DecodeReport {
         optional_header_json,
@@ -370,16 +357,6 @@ where
         decoded_bytes,
     })
 }
-
-fn zlib_decompress_all(data: &[u8]) -> Result<Vec<u8>> {
-    let mut decoder = ZlibDecoder::new(data);
-    let mut output = Vec::new();
-    decoder
-        .read_to_end(&mut output)
-        .map_err(|_| CartError::DecodeFailure("zlib stream"))?;
-    Ok(output)
-}
-
 /// Peek metadata without full decode.
 ///
 /// # Errors
@@ -515,6 +492,30 @@ impl Arc4 {
             let k = self.state[idx as usize];
             *byte ^= k;
         }
+    }
+}
+
+struct Arc4Reader<R> {
+    inner: R,
+    cipher: Arc4,
+}
+
+impl<R> Arc4Reader<R> {
+    fn new(inner: R, key: &[u8; ARC4_KEY_LEN]) -> Self {
+        Self {
+            inner,
+            cipher: Arc4::new(key),
+        }
+    }
+}
+
+impl<R: Read> Read for Arc4Reader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let read = self.inner.read(buf)?;
+        if read > 0 {
+            self.cipher.apply_keystream(&mut buf[..read]);
+        }
+        Ok(read)
     }
 }
 
