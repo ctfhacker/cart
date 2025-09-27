@@ -17,4 +17,7 @@ cargo clippy --all-features --all-targets -- \
 cargo build --verbose --all-targets
 
 # Run the full test suite
-cargo test --workspace --all-targets
+cargo test --workspace --all-targets --all-features
+
+# Doctests compile and run as part of the suite as well
+cargo test --workspace --doc --all-features

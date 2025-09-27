@@ -237,9 +237,14 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`CartError::DecodeFailure`] when the compressed stream cannot be
-/// decompressed, [`CartError::Truncated`] when footer metadata is incomplete,
-/// or [`CartError::InvalidMetadata`] when decrypted metadata is malformed.
+/// - [`CartError::DecodeFailure`] when the compressed stream cannot be
+///   decompressed.
+/// - [`CartError::Truncated`] when footer metadata is incomplete or the
+///   payload lacks enough bytes for optional sections.
+/// - [`CartError::InvalidMetadata`] when decrypted metadata is malformed.
+/// - [`CartError::LengthOverflow`] when optional section lengths do not fit in
+///   memory on the current platform.
+///
 /// The current implementation reads the encrypted payload into memory before
 /// inflating it with zlib; future streaming work will reduce this footprint.
 pub fn decode<R, W>(input: &mut R, output: &mut W) -> Result<DecodeReport>
@@ -318,9 +323,14 @@ fn zlib_decompress_all(data: &[u8]) -> Result<Vec<u8>> {
 ///
 /// # Errors
 ///
-/// Returns [`CartError::Truncated`] when the stream does not contain a complete
-/// mandatory header, or validation errors when the header fields deviate from
-/// the `CaRT` v1 specification.
+/// - [`CartError::Truncated`] when the stream does not contain a complete
+///   mandatory header or footer.
+/// - [`CartError::InvalidMagic`], [`CartError::ReservedMismatch`], or
+///   [`CartError::LengthOverflow`] when the mandatory fields deviate from the
+///   `CaRT` v1 specification.
+/// - [`CartError::InvalidMetadata`] when decrypted optional sections contain
+///   malformed data.
+///
 pub fn metadata<R>(input: &mut R) -> Result<MetadataView>
 where
     R: Read + Seek,
