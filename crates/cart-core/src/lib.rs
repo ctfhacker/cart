@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use flate2::read::ZlibDecoder;
+use flate2::{Compression, read::ZlibDecoder, write::ZlibEncoder};
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
 use std::fmt::{self, Display};
@@ -83,6 +83,15 @@ impl MandatoryFooter {
             optional_footer_pos,
             optional_footer_len,
         })
+    }
+
+    fn as_bytes(&self) -> [u8; FOOTER_LEN] {
+        let mut buf = [0u8; FOOTER_LEN];
+        buf[0..4].copy_from_slice(TRAC_MAGIC);
+        buf[4..12].copy_from_slice(&self.reserved.to_le_bytes());
+        buf[12..20].copy_from_slice(&self.optional_footer_pos.to_le_bytes());
+        buf[20..28].copy_from_slice(&self.optional_footer_len.to_le_bytes());
+        buf
     }
 }
 
@@ -183,11 +192,26 @@ impl MandatoryHeader {
             optional_header_len,
         })
     }
+
+    fn as_bytes(&self) -> [u8; HEADER_LEN] {
+        let mut buf = [0u8; HEADER_LEN];
+        buf[0..4].copy_from_slice(CART_MAGIC);
+        buf[4..6].copy_from_slice(&self.version.to_le_bytes());
+        buf[6..14].copy_from_slice(&self.reserved.to_le_bytes());
+        buf[14..30].copy_from_slice(&self.arc4_key);
+        buf[30..38].copy_from_slice(&self.optional_header_len.to_le_bytes());
+        buf
+    }
 }
 
-/// Stub encode result; populated fields arrive with the real implementation.
+/// Information about an encode operation.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct EncodeReport;
+pub struct EncodeReport {
+    /// Number of plaintext bytes consumed from the caller.
+    pub input_bytes: u64,
+    /// Number of encrypted bytes written between header and footer.
+    pub payload_bytes: u64,
+}
 
 /// Information about a completed decode operation.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -224,13 +248,50 @@ impl Default for MetadataView {
 ///
 /// # Errors
 ///
-/// Always returns [`CartError::Unimplemented`] until the encoder is wired.
-pub fn encode<R, W>(_input: &mut R, _output: &mut W) -> Result<EncodeReport>
+/// Write a `CaRT` archive with default metadata and digests.
+///
+/// The initial implementation keeps the payload in memory before compression and
+/// encryption. Future milestones introduce streaming buffer reuse and optional
+/// metadata handling to align with the Python reference.
+pub fn encode<R, W>(input: &mut R, output: &mut W) -> Result<EncodeReport>
 where
     R: Read,
     W: Write,
 {
-    Err(CartError::Unimplemented("encode"))
+    let mut plaintext = Vec::new();
+    input.read_to_end(&mut plaintext)?;
+
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::fast());
+    encoder.write_all(&plaintext)?;
+    let mut compressed = encoder.finish()?;
+
+    let mut cipher = Arc4::new(&DEFAULT_ARC4_KEY);
+    cipher.apply_keystream(&mut compressed);
+
+    let header = MandatoryHeader {
+        version: VERSION_V1,
+        reserved: RESERVED_DEFAULT,
+        arc4_key: DEFAULT_ARC4_KEY,
+        optional_header_len: 0,
+    };
+    let header_bytes = header.as_bytes();
+    output.write_all(&header_bytes)?;
+
+    output.write_all(&compressed)?;
+
+    let optional_footer_pos = (HEADER_LEN + compressed.len()) as u64;
+    let footer = MandatoryFooter {
+        reserved: RESERVED_DEFAULT,
+        optional_footer_pos,
+        optional_footer_len: 0,
+    };
+    let footer_bytes = footer.as_bytes();
+    output.write_all(&footer_bytes)?;
+
+    Ok(EncodeReport {
+        input_bytes: plaintext.len() as u64,
+        payload_bytes: compressed.len() as u64,
+    })
 }
 
 /// Decode a `CaRT` archive from `input` and write the payload to `output`.
@@ -487,13 +548,13 @@ mod tests {
     use std::io::Cursor;
 
     fn new_header_bytes(optional_header_len: u64) -> Vec<u8> {
-        let mut data = Vec::with_capacity(HEADER_LEN);
-        data.extend_from_slice(CART_MAGIC);
-        data.extend_from_slice(&VERSION_V1.to_le_bytes());
-        data.extend_from_slice(&RESERVED_DEFAULT.to_le_bytes());
-        data.extend_from_slice(&DEFAULT_ARC4_KEY);
-        data.extend_from_slice(&optional_header_len.to_le_bytes());
-        data
+        let header = MandatoryHeader {
+            version: VERSION_V1,
+            reserved: RESERVED_DEFAULT,
+            arc4_key: DEFAULT_ARC4_KEY,
+            optional_header_len,
+        };
+        header.as_bytes().to_vec()
     }
 
     fn build_cart(optional_header: Option<&str>, optional_footer: Option<&str>) -> Vec<u8> {
@@ -503,11 +564,13 @@ mod tests {
             .as_ref()
             .map_or(0, |bytes| bytes.len() as u64);
 
-        buffer.extend_from_slice(CART_MAGIC);
-        buffer.extend_from_slice(&VERSION_V1.to_le_bytes());
-        buffer.extend_from_slice(&RESERVED_DEFAULT.to_le_bytes());
-        buffer.extend_from_slice(&DEFAULT_ARC4_KEY);
-        buffer.extend_from_slice(&optional_header_len.to_le_bytes());
+        let header = MandatoryHeader {
+            version: VERSION_V1,
+            reserved: RESERVED_DEFAULT,
+            arc4_key: DEFAULT_ARC4_KEY,
+            optional_header_len,
+        };
+        buffer.extend_from_slice(&header.as_bytes());
 
         if let Some(bytes) = optional_header_bytes {
             buffer.extend_from_slice(&bytes);
@@ -523,10 +586,12 @@ mod tests {
             buffer.extend_from_slice(&bytes);
         }
 
-        buffer.extend_from_slice(TRAC_MAGIC);
-        buffer.extend_from_slice(&RESERVED_DEFAULT.to_le_bytes());
-        buffer.extend_from_slice(&opt_footer_pos.to_le_bytes());
-        buffer.extend_from_slice(&opt_footer_len.to_le_bytes());
+        let footer = MandatoryFooter {
+            reserved: RESERVED_DEFAULT,
+            optional_footer_pos: opt_footer_pos,
+            optional_footer_len: opt_footer_len,
+        };
+        buffer.extend_from_slice(&footer.as_bytes());
 
         buffer
     }
@@ -536,14 +601,6 @@ mod tests {
         let mut cipher = Arc4::new(&DEFAULT_ARC4_KEY);
         cipher.apply_keystream(&mut data);
         data
-    }
-
-    #[test]
-    fn encode_is_stubbed() {
-        let mut input = Cursor::new(Vec::<u8>::new());
-        let mut output = Cursor::new(Vec::<u8>::new());
-        let err = encode(&mut input, &mut output).unwrap_err();
-        assert!(matches!(err, CartError::Unimplemented("encode")));
     }
 
     #[test]
@@ -612,5 +669,25 @@ mod tests {
         let mut short = Cursor::new(vec![0u8; 3]);
         let result = is_cart(&mut short).expect("short input should return false");
         assert!(!result);
+    }
+
+    #[test]
+    fn encode_round_trip_matches_input() {
+        let payload = b"rust-cart".repeat(8);
+        let mut input = Cursor::new(payload.clone());
+        let mut encoded = Vec::new();
+        let report = encode(&mut input, &mut encoded).expect("encode");
+        assert_eq!(report.input_bytes, u64::try_from(payload.len()).unwrap());
+        assert!(!encoded.is_empty(), "encoded payload should be non-empty");
+
+        let mut encoded_cursor = Cursor::new(&encoded);
+        let mut decoded = Vec::new();
+        let decode_report = decode(&mut encoded_cursor, &mut decoded).expect("decode");
+
+        assert_eq!(decoded, payload, "decoded output must match source bytes");
+        assert_eq!(
+            decode_report.decoded_bytes,
+            u64::try_from(payload.len()).unwrap()
+        );
     }
 }
